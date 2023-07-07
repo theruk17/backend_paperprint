@@ -118,6 +118,59 @@ app.post("/jobdetailslist", (req, res) => {
   );
 });
 
+app.post("/employee", (req, res) => {
+  connection.query(`SELECT * FROM employee`, function (err, results, fields) {
+    res.send(results);
+  });
+});
+
+app.post("/create_joblist", (req, res) => {
+  const {
+    job_id,
+    graphic_id,
+    start_date,
+    start_time,
+    init_material,
+    color_material,
+    coating_material,
+    workpiece_material,
+    dicut,
+    other,
+    wide_size,
+    long_size,
+    page,
+    number_sheet,
+    get_price_1,
+    get_price_2,
+  } = req.body;
+  connection.query(
+    `INSERT INTO job_details (job_id, graphic_id, start_date, start_time, init_material, color_material, coating_material, workpiece_material, dicut, other, wide_size, long_size, page, number_sheet, sum_price, get_price_1, get_price_2, cost, depreciation, profit)  
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 800, ?, ?, 200, 500, 1000) `,
+    [
+      job_id,
+      graphic_id,
+      start_date,
+      start_time,
+      init_material,
+      color_material,
+      coating_material,
+      workpiece_material,
+      dicut,
+      other,
+      wide_size,
+      long_size,
+      page,
+      number_sheet,
+      get_price_1,
+      get_price_2,
+    ],
+    function (err, results, fields) {
+      console.log(err);
+      res.send("success");
+    }
+  );
+});
+
 app.put("/edit_mapping/:id", (req, res) => {
   const { id } = req.params;
   const { jib, advice, bnn, commore, itcity } = req.body;
