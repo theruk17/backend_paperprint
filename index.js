@@ -124,6 +124,12 @@ app.post("/employee", (req, res) => {
   });
 });
 
+app.post("/material", (req, res) => {
+  connection.query(`SELECT * FROM material`, function (err, results, fields) {
+    res.send(results);
+  });
+});
+
 app.post("/create_joblist", (req, res) => {
   const {
     job_id,
