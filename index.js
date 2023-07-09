@@ -118,6 +118,45 @@ app.post("/jobdetailslist", (req, res) => {
   );
 });
 
+app.post("/editjob", (req, res) => {
+  const { id } = req.body;
+  connection.query(
+    `SELECT * FROM job_details j 
+    LEFT JOIN employee e ON e.graphic_id = j.graphic_id
+    WHERE j.id = ?`,
+    [id],
+    function (err, results, fields) {
+      res.send(results);
+    }
+  );
+});
+
+app.post("/review", (req, res) => {
+  const { id } = req.body;
+  connection.query(
+    `SELECT j.job_id,j.start_date, j.wide_size,j.long_size, j.page,j.number_sheet,j.sum_price,j.get_price_1,j.get_price_2,j.cost,j.depreciation,j.profit,e.graphic_name,e.avatar,
+    m1.material_name AS material1, m1.material_cost AS cost1,
+    m2.material_name AS material2, m2.material_cost AS cost2,
+    m3.material_name AS material3, m3.material_cost AS cost3,
+    m4.material_name AS material4, m4.material_cost AS cost4,
+    m5.material_name AS material5, m5.material_cost AS cost5,
+    m6.material_name AS material6, m6.material_cost AS cost6
+    FROM job_details j 
+    LEFT JOIN employee e ON e.graphic_id = j.graphic_id
+    LEFT JOIN material m1 ON m1.material_id = j.init_material
+    LEFT JOIN material m2 ON m2.material_id = j.color_material
+    LEFT JOIN material m3 ON m3.material_id = j.coating_material
+    LEFT JOIN material m4 ON m4.material_id = j.workpiece_material
+    LEFT JOIN material m5 ON m5.material_id = j.dicut
+    LEFT JOIN material m6 ON m6.material_id = j.other
+    WHERE j.id = ?`,
+    [id],
+    function (err, results, fields) {
+      res.send(results);
+    }
+  );
+});
+
 app.post("/employee", (req, res) => {
   connection.query(`SELECT * FROM employee`, function (err, results, fields) {
     res.send(results);
@@ -135,7 +174,6 @@ app.post("/create_joblist", (req, res) => {
     job_id,
     graphic_id,
     start_date,
-    start_time,
     init_material,
     color_material,
     coating_material,
@@ -148,15 +186,97 @@ app.post("/create_joblist", (req, res) => {
     number_sheet,
     get_price_1,
     get_price_2,
+    sumprice,
+    cost,
+    depreciation,
+    profit,
   } = req.body;
   connection.query(
-    `INSERT INTO job_details (job_id, graphic_id, start_date, start_time, init_material, color_material, coating_material, workpiece_material, dicut, other, wide_size, long_size, page, number_sheet, sum_price, get_price_1, get_price_2, cost, depreciation, profit)  
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 800, ?, ?, 200, 500, 1000) `,
+    `INSERT INTO job_details (job_id, graphic_id, start_date, init_material, color_material, coating_material, workpiece_material, dicut, other, wide_size, long_size, page, number_sheet, sum_price, get_price_1, get_price_2, cost, depreciation, profit)  
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) `,
     [
       job_id,
       graphic_id,
       start_date,
-      start_time,
+      init_material,
+      color_material,
+      coating_material,
+      workpiece_material,
+      dicut,
+      other,
+      wide_size,
+      long_size,
+      page,
+      number_sheet,
+      sumprice,
+      get_price_1,
+      get_price_2,
+      cost,
+      depreciation,
+      profit,
+    ],
+    function (err, results, fields) {
+      if (err) {
+        res.status(500).json({ status: 500, message: err });
+      } else {
+        res.status(200).send({
+          status: 200,
+          message: "Successfully created job.",
+        });
+      }
+    }
+  );
+});
+
+app.put("/update_joblist", (req, res) => {
+  const {
+    id,
+    job_id,
+    start_date,
+    graphic_id,
+    init_material,
+    color_material,
+    coating_material,
+    workpiece_material,
+    dicut,
+    other,
+    wide_size,
+    long_size,
+    page,
+    number_sheet,
+    get_price_1,
+    get_price_2,
+    sumprice,
+    cost,
+    depreciation,
+    profit,
+  } = req.body;
+  connection.query(
+    `UPDATE job_details SET 
+    job_id = ?, 
+    start_date = ?, 
+    graphic_id = ?, 
+    init_material = ?, 
+    color_material = ?, 
+    coating_material = ?, 
+    workpiece_material = ?, 
+    dicut = ?, 
+    other = ?, 
+    wide_size = ?, 
+    long_size = ?, 
+    page = ?, 
+    number_sheet = ?, 
+    get_price_1 = ?, 
+    get_price_2 = ?, 
+    sum_price = ?, 
+    cost = ?, 
+    depreciation = ?, 
+    profit = ? 
+    WHERE id = ?`,
+    [
+      job_id,
+      start_date,
+      graphic_id,
       init_material,
       color_material,
       coating_material,
@@ -169,27 +289,19 @@ app.post("/create_joblist", (req, res) => {
       number_sheet,
       get_price_1,
       get_price_2,
+      sumprice,
+      cost,
+      depreciation,
+      profit,
+      id,
     ],
-    function (err, results, fields) {
-      console.log(err);
-      res.send("success");
-    }
-  );
-});
-
-app.put("/edit_mapping/:id", (req, res) => {
-  const { id } = req.params;
-  const { jib, advice, bnn, commore, itcity } = req.body;
-  connection.query(
-    `UPDATE prod_ihavecpu SET prod_map_a = ?, prod_map_j = ?, prod_map_b = ?, prod_map_com_more = ?, prod_map_itcity = ? WHERE prod_ihc_sn = ?`,
-    [advice, jib, bnn, commore, itcity, id],
     (err, result) => {
       if (err) {
         res.status(500).json({ status: 500, message: err });
       } else {
         res.status(200).send({
           status: 200,
-          message: "Update Data Successfully",
+          message: "Successfully created job.",
         });
       }
     }
