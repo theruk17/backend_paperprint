@@ -140,7 +140,10 @@ app.post("/review", (req, res) => {
     m3.material_name AS material3, m3.material_cost AS cost3,
     m4.material_name AS material4, m4.material_cost AS cost4,
     m5.material_name AS material5, m5.material_cost AS cost5,
-    m6.material_name AS material6, m6.material_cost AS cost6
+    m6.material_name AS material6, m6.material_cost AS cost6,
+    m7.material_name AS material7, m7.material_cost AS cost7,
+    m8.material_name AS material8, m8.material_cost AS cost8,
+    m9.material_name AS material9, m9.material_cost AS cost9
     FROM job_details j 
     LEFT JOIN employee e ON e.graphic_id = j.graphic_id
     LEFT JOIN material m1 ON m1.material_id = j.init_material
@@ -149,6 +152,9 @@ app.post("/review", (req, res) => {
     LEFT JOIN material m4 ON m4.material_id = j.workpiece_material
     LEFT JOIN material m5 ON m5.material_id = j.dicut
     LEFT JOIN material m6 ON m6.material_id = j.other
+    LEFT JOIN material m7 ON m7.material_id = j.page
+    LEFT JOIN material m8 ON m8.material_id = j.buyfile
+    LEFT JOIN material m9 ON m9.material_id = j.delivery
     WHERE j.id = ?`,
     [id],
     function (err, results, fields) {
@@ -190,10 +196,12 @@ app.post("/create_joblist", (req, res) => {
     cost,
     depreciation,
     profit,
+    buyfile,
+    delivery,
   } = req.body;
   connection.query(
-    `INSERT INTO job_details (job_id, graphic_id, start_date, init_material, color_material, coating_material, workpiece_material, dicut, other, wide_size, long_size, page, number_sheet, sum_price, get_price_1, get_price_2, cost, depreciation, profit)  
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) `,
+    `INSERT INTO job_details (job_id, graphic_id, start_date, init_material, color_material, coating_material, workpiece_material, dicut, other, wide_size, long_size, page, number_sheet, sum_price, get_price_1, get_price_2, cost, depreciation, profit, buyfile, delivery)  
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?) `,
     [
       job_id,
       graphic_id,
@@ -214,6 +222,8 @@ app.post("/create_joblist", (req, res) => {
       cost,
       depreciation,
       profit,
+      buyfile,
+      delivery,
     ],
     function (err, results, fields) {
       if (err) {
@@ -250,6 +260,8 @@ app.put("/update_joblist", (req, res) => {
     cost,
     depreciation,
     profit,
+    buyfile,
+    delivery,
   } = req.body;
   connection.query(
     `UPDATE job_details SET 
@@ -271,7 +283,9 @@ app.put("/update_joblist", (req, res) => {
     sum_price = ?, 
     cost = ?, 
     depreciation = ?, 
-    profit = ? 
+    profit = ?, 
+    buyfile = ?, 
+    delivery = ?  
     WHERE id = ?`,
     [
       job_id,
@@ -293,6 +307,8 @@ app.put("/update_joblist", (req, res) => {
       cost,
       depreciation,
       profit,
+      buyfile,
+      delivery,
       id,
     ],
     (err, result) => {
