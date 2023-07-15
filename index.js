@@ -110,7 +110,8 @@ app.post("/getdatasheet", async (req, res) => {
 app.post("/jobdetailslist", (req, res) => {
   connection.query(
     `SELECT * FROM job_details j 
-    LEFT JOIN employee e ON e.graphic_id = j.graphic_id`,
+    LEFT JOIN employee e ON e.graphic_id = j.graphic_id
+    ORDER BY j.start_date DESC`,
 
     function (err, results, fields) {
       res.send(results);
@@ -134,7 +135,7 @@ app.post("/editjob", (req, res) => {
 app.post("/review", (req, res) => {
   const { id } = req.body;
   connection.query(
-    `SELECT j.job_id,j.start_date, j.wide_size,j.long_size, j.page,j.number_sheet,j.sum_price,j.get_price_1,j.get_price_2,j.cost,j.depreciation,j.profit,e.graphic_name,e.avatar,
+    `SELECT j.job_id,j.start_date, j.wide_size,j.long_size, j.page,j.number_sheet,j.design,j.sum_price,j.get_price_1,j.get_price_2,j.cost,j.depreciation,j.profit,e.graphic_name,e.avatar,
     m1.material_name AS material1, m1.material_cost AS cost1,
     m2.material_name AS material2, m2.material_cost AS cost2,
     m3.material_name AS material3, m3.material_cost AS cost3,
@@ -143,7 +144,8 @@ app.post("/review", (req, res) => {
     m6.material_name AS material6, m6.material_cost AS cost6,
     m7.material_name AS material7, m7.material_cost AS cost7,
     m8.material_name AS material8, m8.material_cost AS cost8,
-    m9.material_name AS material9, m9.material_cost AS cost9
+    m9.material_name AS material9, m9.material_cost AS cost9,
+    m10.material_name AS material9, m10.material_cost AS cost10
     FROM job_details j 
     LEFT JOIN employee e ON e.graphic_id = j.graphic_id
     LEFT JOIN material m1 ON m1.material_id = j.init_material
@@ -155,6 +157,7 @@ app.post("/review", (req, res) => {
     LEFT JOIN material m7 ON m7.material_id = j.page
     LEFT JOIN material m8 ON m8.material_id = j.buyfile
     LEFT JOIN material m9 ON m9.material_id = j.delivery
+    LEFT JOIN material m10 ON m10.material_id = j.projob
     WHERE j.id = ?`,
     [id],
     function (err, results, fields) {
@@ -180,6 +183,7 @@ app.post("/create_joblist", (req, res) => {
     job_id,
     graphic_id,
     start_date,
+    projob,
     init_material,
     color_material,
     coating_material,
@@ -189,6 +193,7 @@ app.post("/create_joblist", (req, res) => {
     wide_size,
     long_size,
     page,
+    design,
     number_sheet,
     get_price_1,
     get_price_2,
@@ -200,12 +205,13 @@ app.post("/create_joblist", (req, res) => {
     delivery,
   } = req.body;
   connection.query(
-    `INSERT INTO job_details (job_id, graphic_id, start_date, init_material, color_material, coating_material, workpiece_material, dicut, other, wide_size, long_size, page, number_sheet, sum_price, get_price_1, get_price_2, cost, depreciation, profit, buyfile, delivery)  
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?) `,
+    `INSERT INTO job_details (job_id, graphic_id, start_date, projob, init_material, color_material, coating_material, workpiece_material, dicut, other, wide_size, long_size, page, design, number_sheet, sum_price, get_price_1, get_price_2, cost, depreciation, profit, buyfile, delivery)  
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) `,
     [
       job_id,
       graphic_id,
       start_date,
+      projob,
       init_material,
       color_material,
       coating_material,
@@ -215,6 +221,7 @@ app.post("/create_joblist", (req, res) => {
       wide_size,
       long_size,
       page,
+      design,
       number_sheet,
       sumprice,
       get_price_1,
@@ -244,6 +251,7 @@ app.put("/update_joblist", (req, res) => {
     job_id,
     start_date,
     graphic_id,
+    projob,
     init_material,
     color_material,
     coating_material,
@@ -253,6 +261,7 @@ app.put("/update_joblist", (req, res) => {
     wide_size,
     long_size,
     page,
+    design,
     number_sheet,
     get_price_1,
     get_price_2,
@@ -268,6 +277,7 @@ app.put("/update_joblist", (req, res) => {
     job_id = ?, 
     start_date = ?, 
     graphic_id = ?, 
+    projob = ?, 
     init_material = ?, 
     color_material = ?, 
     coating_material = ?, 
@@ -277,6 +287,7 @@ app.put("/update_joblist", (req, res) => {
     wide_size = ?, 
     long_size = ?, 
     page = ?, 
+    design = ?, 
     number_sheet = ?, 
     get_price_1 = ?, 
     get_price_2 = ?, 
@@ -291,6 +302,7 @@ app.put("/update_joblist", (req, res) => {
       job_id,
       start_date,
       graphic_id,
+      projob,
       init_material,
       color_material,
       coating_material,
@@ -300,6 +312,7 @@ app.put("/update_joblist", (req, res) => {
       wide_size,
       long_size,
       page,
+      design,
       number_sheet,
       get_price_1,
       get_price_2,
