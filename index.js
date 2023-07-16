@@ -2,18 +2,44 @@ const { google } = require("googleapis");
 const express = require("express");
 const cors = require("cors");
 const multer = require("multer");
+const path = require("path");
 const mysql = require("mysql2");
 require("dotenv").config();
 const app = express();
 
-app.use(cors());
-app.use(express.json());
+const dir = path.join(__dirname, "uploads");
 
 const connection = mysql.createConnection(process.env.DATABASE_URL);
 
 const serviceAccountKeyFile = "./amiable-poet-385904-447c730ebf42.json";
 const tabNames = ["HOME"];
 const range = "A3:Z";
+
+app.use(cors());
+app.use(express.json());
+app.use(express.static(dir));
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "./uploads/");
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname);
+    cb(null, file.fieldname + "-" + uniqueSuffix + ext);
+  },
+});
+
+const upload = multer({ storage });
+
+app.post("/uploadimg", upload.single("file"), (req, res) => {
+  const { filename } = req.file;
+
+  res.status(200).send({
+    status: 200,
+    message: filename,
+  });
+});
 
 app.get("/", (req, res) => {
   res.send("Hello World!");
@@ -111,6 +137,7 @@ app.post("/jobdetailslist", (req, res) => {
   connection.query(
     `SELECT * FROM job_details j 
     LEFT JOIN employee e ON e.graphic_id = j.graphic_id
+    LEFT JOIN material m ON m.material_id = j.projob
     ORDER BY j.start_date DESC`,
 
     function (err, results, fields) {
@@ -145,7 +172,7 @@ app.post("/review", (req, res) => {
     m7.material_name AS material7, m7.material_cost AS cost7,
     m8.material_name AS material8, m8.material_cost AS cost8,
     m9.material_name AS material9, m9.material_cost AS cost9,
-    m10.material_name AS material9, m10.material_cost AS cost10
+    m10.material_name AS material10, m10.material_cost AS cost10
     FROM job_details j 
     LEFT JOIN employee e ON e.graphic_id = j.graphic_id
     LEFT JOIN material m1 ON m1.material_id = j.init_material
@@ -164,18 +191,6 @@ app.post("/review", (req, res) => {
       res.send(results);
     }
   );
-});
-
-app.post("/employee", (req, res) => {
-  connection.query(`SELECT * FROM employee`, function (err, results, fields) {
-    res.send(results);
-  });
-});
-
-app.post("/material", (req, res) => {
-  connection.query(`SELECT * FROM material`, function (err, results, fields) {
-    res.send(results);
-  });
 });
 
 app.post("/create_joblist", (req, res) => {
@@ -249,7 +264,6 @@ app.put("/update_joblist", (req, res) => {
   const {
     id,
     job_id,
-    start_date,
     graphic_id,
     projob,
     init_material,
@@ -275,7 +289,6 @@ app.put("/update_joblist", (req, res) => {
   connection.query(
     `UPDATE job_details SET 
     job_id = ?, 
-    start_date = ?, 
     graphic_id = ?, 
     projob = ?, 
     init_material = ?, 
@@ -300,7 +313,6 @@ app.put("/update_joblist", (req, res) => {
     WHERE id = ?`,
     [
       job_id,
-      start_date,
       graphic_id,
       projob,
       init_material,
@@ -330,77 +342,203 @@ app.put("/update_joblist", (req, res) => {
       } else {
         res.status(200).send({
           status: 200,
-          message: "Successfully created job.",
+          message: "Successfully Updated job.",
         });
       }
     }
   );
 });
 
-app.put("/edit_status/:id", (req, res) => {
-  const { id } = req.params;
-  const { status } = req.body;
+app.delete("/del_joblist/:id", (req, res) => {
+  const id = req.params.id;
   connection.query(
-    `UPDATE pd_monitor SET mnt_status = ? WHERE mnt_id = ?`,
-    [status, id],
+    "DELETE FROM job_details WHERE id = ?",
+    id,
     (err, result) => {
-      if (err) throw err;
-      res.send("Data updated successsfully");
+      if (err) {
+        res.status(500).json({ status: 500, message: err });
+      } else {
+        res.status(200).send({
+          status: 200,
+          message: "Delete Data Successsfully.",
+        });
+      }
     }
   );
 });
 
-app.get("/url", (req, res) => {
+// ################## USER ##################
+
+app.post("/employee", (req, res) => {
   connection.query(
-    `SELECT * FROM url ORDER BY url_type ASC`,
+    `SELECT * FROM employee`,
+
     function (err, results, fields) {
       res.send(results);
     }
   );
 });
 
-app.put("/edit_link/:id", (req, res) => {
-  const { id } = req.params;
-  const { brand, cat, link } = req.body;
+app.post("/create_employee", (req, res) => {
+  const { graphic_name, avatar } = req.body;
   connection.query(
-    `UPDATE url SET url_name = ?, url_type = ?, url_link = ? WHERE url_id = ?`,
-    [brand, cat, link, id],
-    (err, result) => {
-      if (err) throw err;
-      res.send("Data updated successsfully");
+    `INSERT INTO employee (graphic_name, avatar)  
+    VALUES ( ?, ?) `,
+    [graphic_name, avatar],
+    function (err, results, fields) {
+      if (err) {
+        res.status(500).json({ status: 500, message: err });
+      } else {
+        res.status(200).send({
+          status: 200,
+          message: "Successfully created employee.",
+        });
+      }
     }
   );
 });
 
-app.delete("/admin_del_link/:id", (req, res) => {
-  const id = req.params.id;
-  connection.query("DELETE FROM url WHERE url_id = ?", id, (error, result) => {
-    if (error) throw error;
-    res.send("Delete Data Successsfully");
-  });
+app.put("/update_employee", (req, res) => {
+  const { graphic_id, graphic_name, avatar } = req.body;
+  connection.query(
+    `UPDATE employee SET 
+    graphic_name = ?, 
+    avatar = ? 
+    WHERE graphic_id = ?`,
+    [graphic_name, avatar, graphic_id],
+    (err, result) => {
+      if (err) {
+        res.status(500).json({ status: 500, message: err });
+      } else {
+        res.status(200).send({
+          status: 200,
+          message: "Successfully Updated employee.",
+        });
+      }
+    }
+  );
 });
 
-app.delete("/admin_del/:id", (req, res) => {
+app.delete("/del_employee/:id", (req, res) => {
   const id = req.params.id;
   connection.query(
-    "DELETE FROM pd_monitor WHERE mnt_id = ?",
+    "DELETE FROM employee WHERE graphic_id = ?",
     id,
-    (error, result) => {
-      if (error) throw error;
-      res.send("Delete Data Successsfully");
+    (err, result) => {
+      if (err) {
+        res.status(500).json({ status: 500, message: err });
+      } else {
+        res.status(200).send({
+          status: 200,
+          message: "Delete Data Successsfully.",
+        });
+      }
     }
   );
 });
 
-app.put("/update_img_mnt/:id", (req, res) => {
-  const { id } = req.params;
-  const { imageUrl } = req.body;
+// ################## Material ##################
+
+app.post("/material", (req, res) => {
   connection.query(
-    `UPDATE pd_monitor SET mnt_img = ? WHERE mnt_id = ?`,
-    [imageUrl, id],
+    `SELECT * FROM material m 
+    LEFT JOIN material_type mt ON mt.type_en = m.material_type`,
+
+    function (err, results, fields) {
+      res.send(results);
+    }
+  );
+});
+
+app.post("/material_type", (req, res) => {
+  connection.query(
+    `SELECT * FROM material_type`,
+    function (err, results, fields) {
+      res.send(results);
+    }
+  );
+});
+
+app.post("/create_material", (req, res) => {
+  const { material_name, material_type, material_cost } = req.body;
+  connection.query(
+    `INSERT INTO material (material_name, material_type, material_cost)  
+    VALUES ( ?, ?, ?) `,
+    [material_name, material_type, material_cost],
+    function (err, results, fields) {
+      if (err) {
+        res.status(500).json({ status: 500, message: err });
+      } else {
+        res.status(200).send({
+          status: 200,
+          message: "Successfully created material.",
+        });
+      }
+    }
+  );
+});
+
+app.put("/update_material", (req, res) => {
+  const { material_id, material_name, material_type, material_cost } = req.body;
+  connection.query(
+    `UPDATE material SET 
+    material_name = ?, 
+    material_type = ?, 
+    material_cost = ?
+    WHERE material_id = ?`,
+    [material_name, material_type, material_cost, material_id],
     (err, result) => {
-      if (err) throw err;
-      res.send("Image uploaded successfully!");
+      if (err) {
+        res.status(500).json({ status: 500, message: err });
+      } else {
+        res.status(200).send({
+          status: 200,
+          message: "Successfully Updated material.",
+        });
+      }
+    }
+  );
+});
+
+app.delete("/del_material/:id", (req, res) => {
+  const id = req.params.id;
+  connection.query(
+    "DELETE FROM material WHERE material_id = ?",
+    id,
+    (err, result) => {
+      if (err) {
+        res.status(500).json({ status: 500, message: err });
+      } else {
+        res.status(200).send({
+          status: 200,
+          message: "Delete Data Successsfully.",
+        });
+      }
+    }
+  );
+});
+
+// ################## Dashboard Chart ##################
+
+app.post("/sumprice", (req, res) => {
+  connection.query(
+    `SELECT SUM(sum_price) AS sumprice, SUM(profit) AS profit, SUM(depreciation) AS depreciation, SUM(cost) AS cost  
+    FROM job_details`,
+
+    function (err, results, fields) {
+      res.send(results);
+    }
+  );
+});
+
+app.post("/chart_column", (req, res) => {
+  connection.query(
+    `SELECT DATE(start_date) AS sdate, SUM(sum_price) AS sumprice, SUM(profit) AS profit, SUM(depreciation) AS depreciation  
+    FROM job_details GROUP BY DATE(start_date)
+    ORDER BY DATE(start_date) ASC`,
+
+    function (err, results, fields) {
+      res.send(results);
     }
   );
 });
