@@ -4,12 +4,20 @@ const cors = require("cors");
 const multer = require("multer");
 const path = require("path");
 const mysql = require("mysql2");
+const jwt = require("jsonwebtoken");
 require("dotenv").config();
 const app = express();
-
+const bcrypt = require("bcrypt");
+const saltRounds = 10;
 const dir = path.join(__dirname, "uploads");
 
 const connection = mysql.createConnection(process.env.DATABASE_URL);
+
+const jwtConfig = {
+  secret: process.env.JWT_SECRET,
+  expirationTime: process.env.JWT_EXPIRATION,
+  refreshTokenSecret: process.env.JWT_REFRESH_TOKEN_SECRET,
+};
 
 const serviceAccountKeyFile = "./amiable-poet-385904-447c730ebf42.json";
 const tabNames = ["HOME"];
@@ -41,7 +49,69 @@ app.post("/uploadimg", upload.single("file"), (req, res) => {
   });
 });
 
-app.get("/", (req, res) => {
+app.post("/auth/register", (req, res) => {
+  const { username, password } = req.body;
+  bcrypt.hash(password, saltRounds, function (err, hash) {
+    connection.query(
+      "INSERT INTO users (username, password) VALUES (?, ?)",
+      [username, hash],
+      function (err, results, fields) {
+        res.send("ok");
+      }
+    );
+  });
+});
+
+app.post("/auth/login", (req, res) => {
+  const { username, password } = req.body;
+
+  let error = {
+    username: ["Something went wrong"],
+  };
+  connection.query("SELECT * FROM users", function (err, results, fields) {
+    bcrypt.compare(password, results[0].password, function (err, isLogin) {
+      if (isLogin) {
+        const user = results.find((u) => u.username === username);
+
+        if (user) {
+          const accessToken = jwt.sign({ id: user.user_id }, jwtConfig.secret, {
+            expiresIn: jwtConfig.expirationTime,
+          });
+
+          const response = {
+            accessToken,
+            userData: { ...user, password: undefined },
+          };
+
+          res.status(200).send(response);
+        } else {
+          error = {
+            username: ["username or Password is Invalid"],
+          };
+
+          res.status(400).send(error);
+        }
+      }
+    });
+  });
+});
+
+const jwtValidate = (req, res, next) => {
+  try {
+    if (!req.headers["authorization"]) return res.sendStatus(401);
+
+    const token = req.headers["authorization"].replace("Bearer ", "");
+
+    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+      if (err) throw new Error(err);
+    });
+    next();
+  } catch (error) {
+    return res.sendStatus(403);
+  }
+};
+
+app.get("/", jwtValidate, (req, res) => {
   res.send("Hello World!");
 });
 
