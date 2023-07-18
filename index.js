@@ -66,7 +66,7 @@ app.post("/auth/login", (req, res) => {
   const { username, password } = req.body;
 
   let error = {
-    username: ["Something went wrong"],
+    message: ["Something went wrong"],
   };
   connection.query("SELECT * FROM users", function (err, results, fields) {
     bcrypt.compare(password, results[0].password, function (err, isLogin) {
@@ -86,7 +86,7 @@ app.post("/auth/login", (req, res) => {
           res.status(200).send(response);
         } else {
           error = {
-            username: ["username or Password is Invalid"],
+            message: ["username or Password is Invalid"],
           };
 
           res.status(400).send(error);
@@ -97,12 +97,15 @@ app.post("/auth/login", (req, res) => {
 });
 
 const jwtValidate = (req, res, next) => {
+  //console.log(req.headers.authorization || req.body.headers.authorization);
+
   try {
-    if (!req.headers["authorization"]) return res.sendStatus(401);
+    const token = req.body.headers.Authorization || req.headers.Authorization;
+    if (!token) return res.sendStatus(401);
 
-    const token = req.headers["authorization"].replace("Bearer ", "");
+    const tokens = token.replace("Bearer ", "");
 
-    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    jwt.verify(tokens, jwtConfig.secret, (err, decoded) => {
       if (err) throw new Error(err);
     });
     next();
@@ -203,7 +206,7 @@ app.post("/getdatasheet", async (req, res) => {
   }
 });
 
-app.post("/jobdetailslist", (req, res) => {
+app.post("/jobdetailslist", jwtValidate, (req, res) => {
   connection.query(
     `SELECT * FROM job_details j 
     LEFT JOIN employee e ON e.graphic_id = j.graphic_id
