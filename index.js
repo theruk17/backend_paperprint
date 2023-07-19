@@ -235,7 +235,7 @@ app.post("/editjob", (req, res) => {
 app.post("/review", (req, res) => {
   const { id } = req.body;
   connection.query(
-    `SELECT j.job_id,j.start_date, j.wide_size,j.long_size, j.page,j.number_sheet,j.design,j.sum_price,j.get_price_1,j.get_price_2,j.cost,j.depreciation,j.profit,e.graphic_name,e.avatar,
+    `SELECT j.job_id,j.start_date, j.edit_date, j.wide_size,j.long_size, j.page,j.number_sheet,j.design,j.sum_price,j.get_price_1,j.get_price_2,j.cost,j.depreciation,j.profit,e.graphic_name,e.avatar, j.discount_percen, j.discount_price, j.total_sumprice,
     m1.material_name AS material1, m1.material_cost AS cost1,
     m2.material_name AS material2, m2.material_cost AS cost2,
     m3.material_name AS material3, m3.material_cost AS cost3,
@@ -291,10 +291,13 @@ app.post("/create_joblist", (req, res) => {
     profit,
     buyfile,
     delivery,
+    discount,
+    priceDiscount,
+    totalSumprice,
   } = req.body;
   connection.query(
-    `INSERT INTO job_details (job_id, graphic_id, start_date, projob, init_material, color_material, coating_material, workpiece_material, dicut, other, wide_size, long_size, page, design, number_sheet, sum_price, get_price_1, get_price_2, cost, depreciation, profit, buyfile, delivery)  
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) `,
+    `INSERT INTO job_details (job_id, graphic_id, start_date, projob, init_material, color_material, coating_material, workpiece_material, dicut, other, wide_size, long_size, page, design, number_sheet, sum_price, get_price_1, get_price_2, cost, depreciation, profit, buyfile, delivery, discount_percen, discount_price, total_sumprice)  
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) `,
     [
       job_id,
       graphic_id,
@@ -319,6 +322,9 @@ app.post("/create_joblist", (req, res) => {
       profit,
       buyfile,
       delivery,
+      discount,
+      priceDiscount,
+      totalSumprice,
     ],
     function (err, results, fields) {
       if (err) {
@@ -358,6 +364,9 @@ app.put("/update_joblist", (req, res) => {
     profit,
     buyfile,
     delivery,
+    discount,
+    priceDiscount,
+    totalSumprice,
   } = req.body;
   connection.query(
     `UPDATE job_details SET 
@@ -382,7 +391,10 @@ app.put("/update_joblist", (req, res) => {
     depreciation = ?, 
     profit = ?, 
     buyfile = ?, 
-    delivery = ?  
+    delivery = ?, 
+    discount_percen = ?, 
+    discount_price = ?, 
+    total_sumprice = ? 
     WHERE id = ?`,
     [
       job_id,
@@ -407,6 +419,9 @@ app.put("/update_joblist", (req, res) => {
       profit,
       buyfile,
       delivery,
+      discount,
+      priceDiscount,
+      totalSumprice,
       id,
     ],
     (err, result) => {
@@ -595,7 +610,7 @@ app.delete("/del_material/:id", (req, res) => {
 
 app.post("/sumprice", (req, res) => {
   connection.query(
-    `SELECT SUM(sum_price) AS sumprice, SUM(profit) AS profit, SUM(depreciation) AS depreciation, SUM(cost) AS cost  
+    `SELECT SUM(total_sumprice) AS sumprice, SUM(profit) AS profit, SUM(depreciation) AS depreciation, SUM(cost) AS cost  
     FROM job_details`,
 
     function (err, results, fields) {
@@ -604,9 +619,9 @@ app.post("/sumprice", (req, res) => {
   );
 });
 
-app.post("/chart_column", (req, res) => {
+app.post("/chart_column", jwtValidate, (req, res) => {
   connection.query(
-    `SELECT DATE(start_date) AS sdate, SUM(sum_price) AS sumprice, SUM(profit) AS profit, SUM(depreciation) AS depreciation  
+    `SELECT DATE(start_date) AS sdate, SUM(total_sumprice) AS sumprice, SUM(profit) AS profit, SUM(depreciation) AS depreciation  
     FROM job_details GROUP BY DATE(start_date)
     ORDER BY DATE(start_date) ASC`,
 
