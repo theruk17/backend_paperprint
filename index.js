@@ -91,6 +91,11 @@ app.post("/auth/login", (req, res) => {
 
           res.status(400).send(error);
         }
+      } else {
+        res.status(400).send({
+          status: 400,
+          message: "username or Password is Invalid",
+        });
       }
     });
   });
@@ -116,94 +121,6 @@ const jwtValidate = (req, res, next) => {
 
 app.get("/", jwtValidate, (req, res) => {
   res.send("Hello World!");
-});
-
-app.post("/getdatasheet", async (req, res) => {
-  try {
-    const sheetId = req.body.sheetID;
-    const googleSheetClient = await _getGoogleSheetClient();
-    const data = await _readGoogleSheet(
-      googleSheetClient,
-      sheetId,
-      tabNames,
-      range
-    );
-    res.send(data);
-    async function _getGoogleSheetClient() {
-      const auth = new google.auth.GoogleAuth({
-        keyFile: serviceAccountKeyFile,
-        scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-      });
-      const authClient = await auth.getClient();
-      return google.sheets({
-        version: "v4",
-        auth: authClient,
-      });
-    }
-
-    async function _readGoogleSheet(
-      googleSheetClient,
-      sheetId,
-      tabNames,
-      range
-    ) {
-      for (let tabName of tabNames) {
-        const res = await googleSheetClient.spreadsheets.values.get({
-          spreadsheetId: sheetId,
-          range: `${tabName}!${range}`,
-        });
-
-        let index = 1;
-        res.data.values.forEach(async (row) => {
-          if (!row[0]) {
-            return;
-          }
-          switch (tabName) {
-            case "HOME":
-              connection.query(
-                `INSERT INTO prod_ihavecpu (prod_ihc_sn, prod_ihc_sku, prod_ihc_type, prod_ihc_brand, prod_ihc_subcat, prod_ihc_qty, prod_ihc_name, prod_ihc_cost, prod_ihc_price_1, prod_ihc_price_2) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) 
-              ON DUPLICATE KEY UPDATE prod_ihc_sn = ?, prod_ihc_sku = ?, prod_ihc_type = ?, prod_ihc_brand = ?, prod_ihc_subcat = ?, prod_ihc_qty =?, prod_ihc_name = ?, prod_ihc_cost = ?, prod_ihc_price_1 = ?, prod_ihc_price_2 = ?`,
-                [
-                  row[0],
-                  row[1],
-                  row[5],
-                  row[4],
-                  row[6],
-                  row[7],
-                  row[3],
-                  row[9].replace(",", "").replace(".00", ""),
-                  row[10].replace(",", "").replace(".00", ""),
-                  row[11].replace(",", "").replace(".00", ""),
-                  row[0],
-                  row[1],
-                  row[5],
-                  row[4],
-                  row[6],
-                  row[7],
-                  row[3],
-                  row[9].replace(",", "").replace(".00", ""),
-                  row[10].replace(",", "").replace(".00", ""),
-                  row[11].replace(",", "").replace(".00", ""),
-                ],
-                function (err, result) {
-                  if (err) throw err;
-
-                  console.log(index++ + `. ${row[3]}`);
-                }
-              );
-              break;
-
-            default:
-              break;
-          }
-        });
-      }
-      return "Data inserted into MySQL database";
-    }
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("Error retrieving data from Google Sheet");
-  }
 });
 
 app.post("/jobdetailslist", jwtValidate, (req, res) => {
